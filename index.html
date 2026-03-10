@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>DDRC Supervisor Availability</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #e8f0fe;
+            --success: #34a853;
+            --success-light: #e6f4ea;
+            --warning: #f9ab00;
+            --warning-light: #fef7e0;
+            --danger: #ea4335;
+            --danger-light: #fce8e6;
+            --oncall-color: #7c3aed;
+            --oncall-light: #ede9fe;
+            --morning: #fb923c;
+            --morning-light: #fff7ed;
+            --midday: #facc15;
+            --midday-light: #fefce8;
+            --afternoon: #38bdf8;
+            --afternoon-light: #f0f9ff;
+            --allday: #34a853;
+            --allday-light: #e6f4ea;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 6px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:active { background: rgba(255,255,255,0.3); }
+
+        /* Landing Page */
+        .landing {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 70px);
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .landing-btn {
+            width: 100%;
+            max-width: 320px;
+            padding: 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.15s, box-shadow 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .landing-btn:active {
+            transform: scale(0.97);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .landing-btn .icon { font-size: 36px; }
+
+        .landing-btn.supervisor-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .landing-btn.planning-btn {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .landing-btn .desc {
+            font-size: 13px;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        /* Supervisor Selection */
+        .supervisor-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .supervisor-grid button {
+            padding: 16px 8px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--card-bg);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: all 0.15s;
+        }
+
+        .supervisor-grid button:active {
+            transform: scale(0.95);
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        /* Tab bar */
+        .tab-bar {
+            display: flex;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 58px;
+            z-index: 99;
+        }
+
+        .tab-bar button {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-bar button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Calendar */
+        .calendar-container {
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .month-nav h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .month-nav button {
+            background: var(--primary-light);
+            border: none;
+            color: var(--primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .month-nav button:active { background: var(--primary); color: white; }
+
+        .weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 8px;
+            background: var(--card-bg);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+            transition: all 0.12s;
+            padding: 2px;
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        .calendar-day.weekend { background: #f3f4f6; }
+
+        .calendar-day .day-num { font-size: 13px; line-height: 1; }
+
+        .calendar-day .shift-dots {
+            display: flex;
+            gap: 2px;
+            margin-top: 3px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .calendar-day .shift-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .calendar-day .shift-dot.morning { background: var(--morning); }
+        .calendar-day .shift-dot.midday { background: var(--midday); }
+        .calendar-day .shift-dot.afternoon { background: var(--afternoon); }
+        .calendar-day .shift-dot.allday { background: var(--allday); }
+
+        .calendar-day.has-shift {
+            border: 2px solid var(--primary);
+        }
+
+        .calendar-day:active:not(.empty) {
+            transform: scale(0.92);
+        }
+
+        /* Shift selector modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .shift-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .shift-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+
+        .shift-option:active { transform: scale(0.97); }
+
+        .shift-option.selected { border-color: var(--primary); background: var(--primary-light); }
+
+        .shift-option .shift-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .shift-option .shift-color.morning { background: var(--morning); }
+        .shift-option .shift-color.midday { background: var(--midday); }
+        .shift-option .shift-color.afternoon { background: var(--afternoon); }
+        .shift-option .shift-color.allday { background: var(--allday); }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-actions .cancel-btn {
+            background: #f1f3f4;
+            color: var(--text);
+        }
+
+        .modal-actions .save-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modal-actions .clear-btn {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            justify-content: center;
+        }
+
+        .quick-actions button {
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--card-bg);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+        }
+
+        .quick-actions button:active {
+            background: var(--primary-light);
+        }
+
+        /* On-call Calendar */
+        .oncall-calendar {
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .oncall-legend {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .oncall-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .oncall-legend .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .oncall-legend .dot.weeknight { background: var(--oncall-color); }
+        .oncall-legend .dot.weekend { background: var(--warning); }
+
+        .calendar-day.oncall-weeknight {
+            background: var(--oncall-light);
+            border: 2px solid var(--oncall-color);
+        }
+
+        .calendar-day.oncall-weekend {
+            background: var(--warning-light);
+            border: 2px solid var(--warning);
+        }
+
+        .calendar-day .oncall-label {
+            font-size: 8px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .calendar-day .oncall-label.weeknight-label { color: var(--oncall-color); }
+        .calendar-day .oncall-label.weekend-label { color: var(--warning); }
+
+        /* Planning View */
+        .planning-container {
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .planning-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            justify-content: center;
+        }
+
+        .planning-tabs button {
+            padding: 8px 20px;
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            background: var(--card-bg);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .planning-tabs button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .planning-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 600px;
+        }
+
+        .planning-table th, .planning-table td {
+            border: 1px solid var(--border);
+            padding: 6px 4px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .planning-table th {
+            background: var(--primary);
+            color: white;
+            position: sticky;
+            top: 58px;
+            z-index: 10;
+            font-weight: 600;
+        }
+
+        .planning-table th.supervisor-header {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background: var(--primary);
+        }
+
+        .planning-table td.supervisor-name {
+            position: sticky;
+            left: 0;
+            background: var(--card-bg);
+            font-weight: 600;
+            z-index: 5;
+        }
+
+        .planning-table td.weekend-col {
+            background: #f9fafb;
+        }
+
+        .planning-table .shift-cell {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .shift-cell.morning { color: var(--morning); }
+        .shift-cell.midday { color: #b8860b; }
+        .shift-cell.afternoon { color: var(--afternoon); }
+        .shift-cell.allday { color: var(--allday); }
+
+        .planning-table tr.total-row td {
+            background: #f1f3f4;
+            font-weight: 700;
+        }
+
+        .planning-table tr.total-row td.danger { background: var(--danger-light); color: var(--danger); }
+        .planning-table tr.total-row td.warning { background: var(--warning-light); color: #b8860b; }
+
+        .oncall-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .oncall-dot.weeknight { background: var(--oncall-color); }
+        .oncall-dot.weekend-oc { background: var(--warning); }
+
+        /* Export button */
+        .export-btn {
+            display: block;
+            margin: 16px auto;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+        }
+
+        .export-btn:active { background: #1557b0; }
+
+        /* Status indicator */
+        .status {
+            text-align: center;
+            padding: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .status.saving { color: var(--warning); }
+        .status.saved { color: var(--success); }
+        .status.error { color: var(--danger); }
+
+        /* Section title */
+        .section-title {
+            text-align: center;
+            padding: 16px 20px 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Shift key */
+        .shift-key {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 8px 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .shift-key span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .shift-key .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; }
+    </style>
+</head>
+<body>
+
+<!-- Landing View -->
+<div id="landing-view" class="view active">
+    <div class="header">
+        <h1>DDRC Supervisor Availability</h1>
+        <div class="subtitle">Shift & On-Call Scheduling</div>
+    </div>
+    <div class="landing">
+        <button class="landing-btn supervisor-btn" onclick="showSupervisorSelect()">
+            <span class="icon">&#128197;</span>
+            I'm a Supervisor
+            <span class="desc">Set your availability</span>
+        </button>
+        <button class="landing-btn planning-btn" onclick="showPlanningView()">
+            <span class="icon">&#128202;</span>
+            Planning View
+            <span class="desc">See all supervisor availability</span>
+        </button>
+    </div>
+</div>
+
+<!-- Supervisor Select View -->
+<div id="select-view" class="view">
+    <div class="header">
+        <button class="back-btn" onclick="showLanding()">&#8592;</button>
+        <h1>Select Your Initials</h1>
+    </div>
+    <div class="section-title">Tap your initials to continue</div>
+    <div class="supervisor-grid" id="supervisor-grid"></div>
+</div>
+
+<!-- Supervisor Calendar View -->
+<div id="calendar-view" class="view">
+    <div class="header">
+        <button class="back-btn" onclick="showSupervisorSelect()">&#8592;</button>
+        <h1 id="calendar-header-title">Availability</h1>
+        <div class="subtitle" id="calendar-header-sub"></div>
+    </div>
+    <div class="tab-bar">
+        <button class="active" onclick="switchTab('shifts')">Shifts</button>
+        <button onclick="switchTab('oncall')">On-Call</button>
+    </div>
+
+    <!-- Shifts Tab -->
+    <div id="shifts-tab">
+        <div class="calendar-container">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)">&#8592;</button>
+                <h2 id="month-label"></h2>
+                <button onclick="changeMonth(1)">&#8594;</button>
+            </div>
+            <div class="shift-key">
+                <span><span class="dot" style="background:var(--morning)"></span> AM</span>
+                <span><span class="dot" style="background:var(--midday)"></span> Mid</span>
+                <span><span class="dot" style="background:var(--afternoon)"></span> PM</span>
+                <span><span class="dot" style="background:var(--allday)"></span> All Day</span>
+            </div>
+            <div class="weekday-header">
+                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+            </div>
+            <div class="calendar-grid" id="shift-calendar"></div>
+            <div class="quick-actions">
+                <button onclick="quickAction('allday-weekdays')">All Weekdays (Full Day)</button>
+                <button onclick="quickAction('allday-all')">All Days (Full Day)</button>
+                <button onclick="quickAction('clear')">Clear All</button>
+            </div>
+        </div>
+        <div class="status" id="shift-status"></div>
+    </div>
+
+    <!-- On-Call Tab -->
+    <div id="oncall-tab" style="display:none;">
+        <div class="oncall-calendar">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)">&#8592;</button>
+                <h2 id="oncall-month-label"></h2>
+                <button onclick="changeMonth(1)">&#8594;</button>
+            </div>
+            <div class="oncall-legend">
+                <span><span class="dot weeknight"></span> Weeknight</span>
+                <span><span class="dot weekend"></span> Weekend</span>
+            </div>
+            <div class="section-title" style="padding-top:0">Tap to toggle on-call availability</div>
+            <div class="weekday-header">
+                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+            </div>
+            <div class="calendar-grid" id="oncall-calendar"></div>
+            <div class="quick-actions">
+                <button onclick="oncallQuickAction('all-weeknights')">All Weeknights</button>
+                <button onclick="oncallQuickAction('all-weekends')">All Weekends</button>
+                <button onclick="oncallQuickAction('all')">All On-Call</button>
+                <button onclick="oncallQuickAction('clear')">Clear All</button>
+            </div>
+        </div>
+        <div class="status" id="oncall-status"></div>
+    </div>
+</div>
+
+<!-- Shift Selector Modal -->
+<div class="modal-overlay" id="shift-modal">
+    <div class="modal">
+        <h3 id="modal-date-label">Select Shift</h3>
+        <div class="shift-options" id="shift-options">
+            <label class="shift-option" data-shift="morning">
+                <span class="shift-color morning"></span>
+                Morning
+            </label>
+            <label class="shift-option" data-shift="midday">
+                <span class="shift-color midday"></span>
+                Midday
+            </label>
+            <label class="shift-option" data-shift="afternoon">
+                <span class="shift-color afternoon"></span>
+                Afternoon
+            </label>
+            <label class="shift-option" data-shift="allday">
+                <span class="shift-color allday"></span>
+                All Day
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="closeShiftModal()">Cancel</button>
+            <button class="clear-btn" onclick="clearDayShift()">Clear</button>
+            <button class="save-btn" onclick="saveShiftModal()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Planning View -->
+<div id="planning-view" class="view">
+    <div class="header">
+        <button class="back-btn" onclick="showLanding()">&#8592;</button>
+        <h1>Planning View</h1>
+    </div>
+    <div class="planning-container">
+        <div class="month-nav">
+            <button onclick="changePlanningMonth(-1)">&#8592;</button>
+            <h2 id="planning-month-label"></h2>
+            <button onclick="changePlanningMonth(1)">&#8594;</button>
+        </div>
+        <div class="planning-tabs">
+            <button class="active" onclick="switchPlanningTab('shifts')">Shifts</button>
+            <button onclick="switchPlanningTab('oncall')">On-Call</button>
+        </div>
+
+        <!-- Shifts Planning Table -->
+        <div id="planning-shifts-table"></div>
+
+        <!-- On-Call Planning Table -->
+        <div id="planning-oncall-table" style="display:none;"></div>
+
+        <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCxKlXOcamGsMqKTMqBPDAkyn1ZiNyfrMo",
+        authDomain: "oncalldoctoravailability.firebaseapp.com",
+        projectId: "oncalldoctoravailability",
+        storageBucket: "oncalldoctoravailability.firebasestorage.app",
+        messagingSenderId: "427aborede292996",
+        appId: "1:427292996:web:supervisoravailability"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const SUPERVISORS = ['CB', 'CJB', 'CJ', 'JA', 'JMP', 'JW', 'NC', 'TS', 'RE', 'TM'];
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    let currentSupervisor = null;
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let planningYear = new Date().getFullYear();
+    let planningMonth = new Date().getMonth();
+    let shiftData = {};    // { "YYYY-MM-DD": ["morning","afternoon"], ... }
+    let oncallData = {};   // { "YYYY-MM-DD": true, ... }
+    let currentActiveTab = 'shifts';
+    let planningActiveTab = 'shifts';
+    let modalDate = null;
+    let modalSelectedShifts = [];
+
+    // ── Views ──
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    window.showLanding = () => showView('landing-view');
+
+    window.showSupervisorSelect = () => {
+        showView('select-view');
+        renderSupervisorGrid();
+    };
+
+    window.showPlanningView = () => {
+        showView('planning-view');
+        updatePlanningMonthLabel();
+        loadPlanningData();
+    };
+
+    function showCalendarView(initials) {
+        currentSupervisor = initials;
+        document.getElementById('calendar-header-title').textContent = initials;
+        document.getElementById('calendar-header-sub').textContent = 'Set your availability';
+        showView('calendar-view');
+        loadShiftData();
+        loadOncallData();
+    }
+
+    // ── Tab switching ──
+    window.switchTab = (tab) => {
+        currentActiveTab = tab;
+        document.querySelectorAll('.tab-bar button').forEach((b, i) => {
+            b.classList.toggle('active', (i === 0 && tab === 'shifts') || (i === 1 && tab === 'oncall'));
+        });
+        document.getElementById('shifts-tab').style.display = tab === 'shifts' ? '' : 'none';
+        document.getElementById('oncall-tab').style.display = tab === 'oncall' ? '' : 'none';
+        if (tab === 'shifts') renderShiftCalendar();
+        else renderOncallCalendar();
+    };
+
+    // ── Supervisor Grid ──
+    function renderSupervisorGrid() {
+        const grid = document.getElementById('supervisor-grid');
+        grid.innerHTML = '';
+        SUPERVISORS.forEach(s => {
+            const btn = document.createElement('button');
+            btn.textContent = s;
+            btn.onclick = () => showCalendarView(s);
+            grid.appendChild(btn);
+        });
+    }
+
+    // ── Month navigation ──
+    window.changeMonth = (delta) => {
+        currentMonth += delta;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        loadShiftData();
+        loadOncallData();
+    };
+
+    function updateMonthLabels() {
+        const label = `${MONTHS[currentMonth]} ${currentYear}`;
+        document.getElementById('month-label').textContent = label;
+        document.getElementById('oncall-month-label').textContent = label;
+    }
+
+    // ── Shift Data (Firestore) ──
+    function shiftDocId() {
+        return `sup_${currentSupervisor}_${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+    }
+
+    async function loadShiftData() {
+        updateMonthLabels();
+        try {
+            const snap = await getDoc(doc(db, 'supervisor_availability', shiftDocId()));
+            shiftData = snap.exists() ? (snap.data().dates || {}) : {};
+        } catch(e) {
+            console.error('Load shift error:', e);
+            shiftData = {};
+        }
+        renderShiftCalendar();
+    }
+
+    async function saveShiftData() {
+        const statusEl = document.getElementById('shift-status');
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'status saving';
+        try {
+            await setDoc(doc(db, 'supervisor_availability', shiftDocId()), {
+                supervisor: currentSupervisor,
+                year: currentYear,
+                month: currentMonth + 1,
+                dates: shiftData
+            });
+            statusEl.textContent = 'Saved';
+            statusEl.className = 'status saved';
+        } catch(e) {
+            console.error('Save shift error:', e);
+            statusEl.textContent = 'Error saving';
+            statusEl.className = 'status error';
+        }
+        setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'status'; }, 2000);
+    }
+
+    // ── On-Call Data (Firestore) ──
+    function oncallDocId() {
+        return `sup_oncall_${currentSupervisor}_${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+    }
+
+    async function loadOncallData() {
+        try {
+            const snap = await getDoc(doc(db, 'supervisor_oncall', oncallDocId()));
+            oncallData = snap.exists() ? (snap.data().dates || {}) : {};
+        } catch(e) {
+            console.error('Load oncall error:', e);
+            oncallData = {};
+        }
+        renderOncallCalendar();
+    }
+
+    async function saveOncallData() {
+        const statusEl = document.getElementById('oncall-status');
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'status saving';
+        try {
+            await setDoc(doc(db, 'supervisor_oncall', oncallDocId()), {
+                supervisor: currentSupervisor,
+                year: currentYear,
+                month: currentMonth + 1,
+                dates: oncallData
+            });
+            statusEl.textContent = 'Saved';
+            statusEl.className = 'status saved';
+        } catch(e) {
+            console.error('Save oncall error:', e);
+            statusEl.textContent = 'Error saving';
+            statusEl.className = 'status error';
+        }
+        setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'status'; }, 2000);
+    }
+
+    // ── Render Shift Calendar ──
+    function renderShiftCalendar() {
+        const grid = document.getElementById('shift-calendar');
+        grid.innerHTML = '';
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        let startDow = firstDay.getDay();
+        startDow = startDow === 0 ? 6 : startDow - 1; // Monday-based
+
+        for (let i = 0; i < startDow; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'calendar-day empty';
+            grid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const date = new Date(currentYear, currentMonth, d);
+            const dow = date.getDay();
+            const isWeekend = dow === 0 || dow === 6;
+
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day' + (isWeekend ? ' weekend' : '');
+
+            const dayNum = document.createElement('span');
+            dayNum.className = 'day-num';
+            dayNum.textContent = d;
+            cell.appendChild(dayNum);
+
+            const shifts = shiftData[dateStr];
+            if (shifts && shifts.length > 0) {
+                cell.classList.add('has-shift');
+                const dotsDiv = document.createElement('div');
+                dotsDiv.className = 'shift-dots';
+                if (shifts.includes('allday')) {
+                    const dot = document.createElement('span');
+                    dot.className = 'shift-dot allday';
+                    dotsDiv.appendChild(dot);
+                } else {
+                    ['morning','midday','afternoon'].forEach(s => {
+                        if (shifts.includes(s)) {
+                            const dot = document.createElement('span');
+                            dot.className = 'shift-dot ' + s;
+                            dotsDiv.appendChild(dot);
+                        }
+                    });
+                }
+                cell.appendChild(dotsDiv);
+            }
+
+            cell.onclick = () => openShiftModal(dateStr, d);
+            grid.appendChild(cell);
+        }
+    }
+
+    // ── Shift Modal ──
+    window.openShiftModal = (dateStr, day) => {
+        modalDate = dateStr;
+        document.getElementById('modal-date-label').textContent = `${day} ${MONTHS[currentMonth]} ${currentYear}`;
+        modalSelectedShifts = shiftData[dateStr] ? [...shiftData[dateStr]] : [];
+        updateModalOptions();
+        document.getElementById('shift-modal').classList.add('show');
+    };
+
+    function updateModalOptions() {
+        document.querySelectorAll('.shift-option').forEach(opt => {
+            const shift = opt.dataset.shift;
+            opt.classList.toggle('selected', modalSelectedShifts.includes(shift));
+        });
+    }
+
+    document.querySelectorAll('.shift-option').forEach(opt => {
+        opt.onclick = () => {
+            const shift = opt.dataset.shift;
+            if (shift === 'allday') {
+                // Toggle allday - clears others
+                if (modalSelectedShifts.includes('allday')) {
+                    modalSelectedShifts = [];
+                } else {
+                    modalSelectedShifts = ['allday'];
+                }
+            } else {
+                // Remove allday if selecting partial
+                modalSelectedShifts = modalSelectedShifts.filter(s => s !== 'allday');
+                if (modalSelectedShifts.includes(shift)) {
+                    modalSelectedShifts = modalSelectedShifts.filter(s => s !== shift);
+                } else {
+                    modalSelectedShifts.push(shift);
+                }
+            }
+            updateModalOptions();
+        };
+    });
+
+    window.closeShiftModal = () => {
+        document.getElementById('shift-modal').classList.remove('show');
+    };
+
+    window.saveShiftModal = () => {
+        if (modalSelectedShifts.length > 0) {
+            shiftData[modalDate] = [...modalSelectedShifts];
+        } else {
+            delete shiftData[modalDate];
+        }
+        closeShiftModal();
+        renderShiftCalendar();
+        saveShiftData();
+    };
+
+    window.clearDayShift = () => {
+        modalSelectedShifts = [];
+        delete shiftData[modalDate];
+        closeShiftModal();
+        renderShiftCalendar();
+        saveShiftData();
+    };
+
+    // ── Quick Actions (Shifts) ──
+    window.quickAction = (action) => {
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const date = new Date(currentYear, currentMonth, d);
+            const dow = date.getDay();
+            const isWeekend = dow === 0 || dow === 6;
+
+            if (action === 'clear') {
+                delete shiftData[dateStr];
+            } else if (action === 'allday-weekdays' && !isWeekend) {
+                shiftData[dateStr] = ['allday'];
+            } else if (action === 'allday-all') {
+                shiftData[dateStr] = ['allday'];
+            }
+        }
+        renderShiftCalendar();
+        saveShiftData();
+    };
+
+    // ── Render On-Call Calendar ──
+    function renderOncallCalendar() {
+        const grid = document.getElementById('oncall-calendar');
+        grid.innerHTML = '';
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        let startDow = firstDay.getDay();
+        startDow = startDow === 0 ? 6 : startDow - 1;
+
+        for (let i = 0; i < startDow; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'calendar-day empty';
+            grid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const date = new Date(currentYear, currentMonth, d);
+            const dow = date.getDay();
+            const isWeekend = dow === 0 || dow === 6;
+
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            if (isWeekend) cell.classList.add('weekend');
+
+            const dayNum = document.createElement('span');
+            dayNum.className = 'day-num';
+            dayNum.textContent = d;
+            cell.appendChild(dayNum);
+
+            const isOncall = oncallData[dateStr];
+            if (isOncall) {
+                if (isWeekend) {
+                    cell.classList.add('oncall-weekend');
+                    const label = document.createElement('span');
+                    label.className = 'oncall-label weekend-label';
+                    label.textContent = 'W/E';
+                    cell.appendChild(label);
+                } else {
+                    cell.classList.add('oncall-weeknight');
+                    const label = document.createElement('span');
+                    label.className = 'oncall-label weeknight-label';
+                    label.textContent = 'ON';
+                    cell.appendChild(label);
+                }
+            }
+
+            cell.onclick = () => {
+                if (oncallData[dateStr]) {
+                    delete oncallData[dateStr];
+                } else {
+                    oncallData[dateStr] = true;
+                }
+                renderOncallCalendar();
+                saveOncallData();
+            };
+            grid.appendChild(cell);
+        }
+    }
+
+    // ── On-Call Quick Actions ──
+    window.oncallQuickAction = (action) => {
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const date = new Date(currentYear, currentMonth, d);
+            const dow = date.getDay();
+            const isWeekend = dow === 0 || dow === 6;
+
+            if (action === 'clear') {
+                delete oncallData[dateStr];
+            } else if (action === 'all-weeknights' && !isWeekend) {
+                oncallData[dateStr] = true;
+            } else if (action === 'all-weekends' && isWeekend) {
+                oncallData[dateStr] = true;
+            } else if (action === 'all') {
+                oncallData[dateStr] = true;
+            }
+        }
+        renderOncallCalendar();
+        saveOncallData();
+    };
+
+    // ── Planning View ──
+    window.changePlanningMonth = (delta) => {
+        planningMonth += delta;
+        if (planningMonth > 11) { planningMonth = 0; planningYear++; }
+        if (planningMonth < 0) { planningMonth = 11; planningYear--; }
+        updatePlanningMonthLabel();
+        loadPlanningData();
+    };
+
+    function updatePlanningMonthLabel() {
+        document.getElementById('planning-month-label').textContent = `${MONTHS[planningMonth]} ${planningYear}`;
+    }
+
+    window.switchPlanningTab = (tab) => {
+        planningActiveTab = tab;
+        document.querySelectorAll('.planning-tabs button').forEach((b, i) => {
+            b.classList.toggle('active', (i === 0 && tab === 'shifts') || (i === 1 && tab === 'oncall'));
+        });
+        document.getElementById('planning-shifts-table').style.display = tab === 'shifts' ? '' : 'none';
+        document.getElementById('planning-oncall-table').style.display = tab === 'oncall' ? '' : 'none';
+    };
+
+    async function loadPlanningData() {
+        const monthStr = `${planningYear}-${String(planningMonth+1).padStart(2,'0')}`;
+        const lastDay = new Date(planningYear, planningMonth + 1, 0).getDate();
+
+        // Load shift data for all supervisors
+        const allShifts = {};
+        const allOncall = {};
+
+        const promises = SUPERVISORS.flatMap(sup => [
+            getDoc(doc(db, 'supervisor_availability', `sup_${sup}_${monthStr}`)).then(snap => {
+                allShifts[sup] = snap.exists() ? (snap.data().dates || {}) : {};
+            }).catch(() => { allShifts[sup] = {}; }),
+            getDoc(doc(db, 'supervisor_oncall', `sup_oncall_${sup}_${monthStr}`)).then(snap => {
+                allOncall[sup] = snap.exists() ? (snap.data().dates || {}) : {};
+            }).catch(() => { allOncall[sup] = {}; })
+        ]);
+
+        await Promise.all(promises);
+
+        renderPlanningShifts(lastDay, allShifts);
+        renderPlanningOncall(lastDay, allOncall);
+    }
+
+    function renderPlanningShifts(lastDay, allShifts) {
+        const monthStr = `${planningYear}-${String(planningMonth+1).padStart(2,'0')}`;
+        let html = '<table class="planning-table"><thead><tr><th class="supervisor-header">Supervisor</th>';
+
+        for (let d = 1; d <= lastDay; d++) {
+            const date = new Date(planningYear, planningMonth, d);
+            const dow = date.getDay();
+            const dayName = ['Su','Mo','Tu','We','Th','Fr','Sa'][dow];
+            html += `<th>${dayName}<br>${d}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        const totals = new Array(lastDay).fill(0);
+
+        SUPERVISORS.forEach(sup => {
+            html += `<tr><td class="supervisor-name">${sup}</td>`;
+            for (let d = 1; d <= lastDay; d++) {
+                const dateStr = `${monthStr}-${String(d).padStart(2,'0')}`;
+                const date = new Date(planningYear, planningMonth, d);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const shifts = allShifts[sup][dateStr];
+                let cellContent = '';
+                let cellClass = '';
+
+                if (shifts && shifts.length > 0) {
+                    totals[d-1]++;
+                    if (shifts.includes('allday')) {
+                        cellContent = 'ALL';
+                        cellClass = 'shift-cell allday';
+                    } else {
+                        const labels = [];
+                        if (shifts.includes('morning')) labels.push('AM');
+                        if (shifts.includes('midday')) labels.push('Mid');
+                        if (shifts.includes('afternoon')) labels.push('PM');
+                        cellContent = labels.join('/');
+                        cellClass = 'shift-cell ' + shifts[0];
+                    }
+                }
+
+                html += `<td class="${isWeekend ? 'weekend-col' : ''} ${cellClass}">${cellContent}</td>`;
+            }
+            html += '</tr>';
+        });
+
+        // Total row
+        html += '<tr class="total-row"><td class="supervisor-name">Total</td>';
+        for (let d = 0; d < lastDay; d++) {
+            const t = totals[d];
+            let cls = '';
+            if (t === 0) cls = 'danger';
+            else if (t === 1) cls = 'warning';
+            html += `<td class="${cls}">${t}</td>`;
+        }
+        html += '</tr></tbody></table>';
+
+        document.getElementById('planning-shifts-table').innerHTML = html;
+    }
+
+    function renderPlanningOncall(lastDay, allOncall) {
+        const monthStr = `${planningYear}-${String(planningMonth+1).padStart(2,'0')}`;
+        let html = '<table class="planning-table"><thead><tr><th class="supervisor-header">Supervisor</th>';
+
+        for (let d = 1; d <= lastDay; d++) {
+            const date = new Date(planningYear, planningMonth, d);
+            const dow = date.getDay();
+            const dayName = ['Su','Mo','Tu','We','Th','Fr','Sa'][dow];
+            html += `<th>${dayName}<br>${d}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        const totals = new Array(lastDay).fill(0);
+
+        SUPERVISORS.forEach(sup => {
+            html += `<tr><td class="supervisor-name">${sup}</td>`;
+            for (let d = 1; d <= lastDay; d++) {
+                const dateStr = `${monthStr}-${String(d).padStart(2,'0')}`;
+                const date = new Date(planningYear, planningMonth, d);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isOncall = allOncall[sup][dateStr];
+                let cellContent = '';
+
+                if (isOncall) {
+                    totals[d-1]++;
+                    if (isWeekend) {
+                        cellContent = '<span class="oncall-dot weekend-oc"></span>';
+                    } else {
+                        cellContent = '<span class="oncall-dot weeknight"></span>';
+                    }
+                }
+
+                html += `<td class="${isWeekend ? 'weekend-col' : ''}">${cellContent}</td>`;
+            }
+            html += '</tr>';
+        });
+
+        // Total row
+        html += '<tr class="total-row"><td class="supervisor-name">Total</td>';
+        for (let d = 0; d < lastDay; d++) {
+            const t = totals[d];
+            let cls = '';
+            if (t === 0) cls = 'danger';
+            else if (t === 1) cls = 'warning';
+            html += `<td class="${cls}">${t}</td>`;
+        }
+        html += '</tr></tbody></table>';
+
+        document.getElementById('planning-oncall-table').innerHTML = html;
+    }
+
+    // ── CSV Export ──
+    window.exportCSV = () => {
+        // Trigger re-export based on active planning tab
+        const monthStr = `${planningYear}-${String(planningMonth+1).padStart(2,'0')}`;
+        const lastDay = new Date(planningYear, planningMonth + 1, 0).getDate();
+
+        // Read from the current table
+        const tableEl = planningActiveTab === 'shifts'
+            ? document.querySelector('#planning-shifts-table table')
+            : document.querySelector('#planning-oncall-table table');
+
+        if (!tableEl) return;
+
+        let csv = '';
+        tableEl.querySelectorAll('tr').forEach(row => {
+            const cells = [];
+            row.querySelectorAll('th, td').forEach(cell => {
+                let text = cell.textContent.trim().replace(/\n/g, ' ');
+                cells.push('"' + text.replace(/"/g, '""') + '"');
+            });
+            csv += cells.join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `supervisor_${planningActiveTab}_${monthStr}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Close modal on overlay click
+    document.getElementById('shift-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'shift-modal') closeShiftModal();
+    });
+</script>
+
+</body>
+</html>
