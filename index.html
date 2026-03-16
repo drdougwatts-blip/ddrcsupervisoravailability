@@ -24,6 +24,8 @@
             --afternoon-light: #f0f9ff;
             --allday: #34a853;
             --allday-light: #e6f4ea;
+            --na: #ea4335;
+            --na-light: #fce8e6;
             --bg: #f8f9fa;
             --card-bg: #ffffff;
             --text: #202124;
@@ -292,6 +294,7 @@
         .calendar-day .shift-dot.midday { background: var(--midday); }
         .calendar-day .shift-dot.afternoon { background: var(--afternoon); }
         .calendar-day .shift-dot.allday { background: var(--allday); }
+        .calendar-day .shift-dot.na { background: var(--na); }
 
         .calendar-day.has-shift {
             border: 2px solid var(--primary);
@@ -365,6 +368,7 @@
         .shift-option .shift-color.midday { background: var(--midday); }
         .shift-option .shift-color.afternoon { background: var(--afternoon); }
         .shift-option .shift-color.allday { background: var(--allday); }
+        .shift-option .shift-color.na { background: var(--na); }
 
         .modal-actions {
             display: flex;
@@ -551,6 +555,7 @@
         .shift-cell.midday { color: #b8860b; }
         .shift-cell.afternoon { color: var(--afternoon); }
         .shift-cell.allday { color: var(--allday); }
+        .shift-cell.na { color: var(--na); }
 
         .planning-table tr.total-row td {
             background: #f1f3f4;
@@ -692,6 +697,7 @@
                 <span><span class="dot" style="background:var(--midday)"></span> Mid</span>
                 <span><span class="dot" style="background:var(--afternoon)"></span> PM</span>
                 <span><span class="dot" style="background:var(--allday)"></span> All Day</span>
+                <span><span class="dot" style="background:var(--na)"></span> N/A</span>
             </div>
             <div class="weekday-header">
                 <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
@@ -754,6 +760,10 @@
             <label class="shift-option" data-shift="allday">
                 <span class="shift-color allday"></span>
                 All Day
+            </label>
+            <label class="shift-option" data-shift="na">
+                <span class="shift-color na"></span>
+                Not Available
             </label>
         </div>
         <div class="modal-actions">
@@ -1000,7 +1010,11 @@
                 cell.classList.add('has-shift');
                 const dotsDiv = document.createElement('div');
                 dotsDiv.className = 'shift-dots';
-                if (shifts.includes('allday')) {
+                if (shifts.includes('na')) {
+                    const dot = document.createElement('span');
+                    dot.className = 'shift-dot na';
+                    dotsDiv.appendChild(dot);
+                } else if (shifts.includes('allday')) {
                     const dot = document.createElement('span');
                     dot.className = 'shift-dot allday';
                     dotsDiv.appendChild(dot);
@@ -1040,7 +1054,14 @@
     document.querySelectorAll('.shift-option').forEach(opt => {
         opt.onclick = () => {
             const shift = opt.dataset.shift;
-            if (shift === 'allday') {
+            if (shift === 'na') {
+                // Toggle NA - clears others
+                if (modalSelectedShifts.includes('na')) {
+                    modalSelectedShifts = [];
+                } else {
+                    modalSelectedShifts = ['na'];
+                }
+            } else if (shift === 'allday') {
                 // Toggle allday - clears others
                 if (modalSelectedShifts.includes('allday')) {
                     modalSelectedShifts = [];
@@ -1048,8 +1069,8 @@
                     modalSelectedShifts = ['allday'];
                 }
             } else {
-                // Remove allday if selecting partial
-                modalSelectedShifts = modalSelectedShifts.filter(s => s !== 'allday');
+                // Remove allday/na if selecting partial
+                modalSelectedShifts = modalSelectedShifts.filter(s => s !== 'allday' && s !== 'na');
                 if (modalSelectedShifts.includes(shift)) {
                     modalSelectedShifts = modalSelectedShifts.filter(s => s !== shift);
                 } else {
@@ -1257,17 +1278,22 @@
                 let cellClass = '';
 
                 if (shifts && shifts.length > 0) {
-                    totals[d-1]++;
-                    if (shifts.includes('allday')) {
-                        cellContent = 'ALL';
-                        cellClass = 'shift-cell allday';
+                    if (shifts.includes('na')) {
+                        cellContent = 'N/A';
+                        cellClass = 'shift-cell na';
                     } else {
-                        const labels = [];
-                        if (shifts.includes('morning')) labels.push('AM');
-                        if (shifts.includes('midday')) labels.push('Mid');
-                        if (shifts.includes('afternoon')) labels.push('PM');
-                        cellContent = labels.join('/');
-                        cellClass = 'shift-cell ' + shifts[0];
+                        totals[d-1]++;
+                        if (shifts.includes('allday')) {
+                            cellContent = 'ALL';
+                            cellClass = 'shift-cell allday';
+                        } else {
+                            const labels = [];
+                            if (shifts.includes('morning')) labels.push('AM');
+                            if (shifts.includes('midday')) labels.push('Mid');
+                            if (shifts.includes('afternoon')) labels.push('PM');
+                            cellContent = labels.join('/');
+                            cellClass = 'shift-cell ' + shifts[0];
+                        }
                     }
                 }
 
