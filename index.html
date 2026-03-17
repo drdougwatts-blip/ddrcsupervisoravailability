@@ -818,7 +818,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const SUPERVISORS = ['CB', 'CJB', 'CJ', 'JA', 'JW', 'NC', 'NM', 'TS', 'RE'];
+    const SUPERVISORS = ['CB', 'CJB', 'CJ', 'JA', 'JW', 'NC', 'NM', 'TS', 'RE', 'TM', 'JMP'];
+    const ONCALL_SUPERVISORS = ['CB', 'CJB', 'CJ', 'JA', 'JW', 'NC', 'NM', 'TS', 'RE'];
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -857,9 +858,13 @@
         currentSupervisor = initials;
         document.getElementById('calendar-header-title').textContent = initials;
         document.getElementById('calendar-header-sub').textContent = 'Set your availability';
+        const isOncallSup = ONCALL_SUPERVISORS.includes(initials);
+        const oncallTabBtn = document.querySelectorAll('.tab-bar button')[1];
+        oncallTabBtn.style.display = isOncallSup ? '' : 'none';
         showView('calendar-view');
+        switchTab('shifts');
         loadShiftData();
-        loadOncallData();
+        if (isOncallSup) loadOncallData();
     }
 
     // ── Tab switching ──
@@ -1238,14 +1243,17 @@
         const allShifts = {};
         const allOncall = {};
 
-        const promises = SUPERVISORS.flatMap(sup => [
+        const shiftPromises = SUPERVISORS.map(sup =>
             getDoc(doc(db, 'supervisor_availability', `sup_${sup}_${monthStr}`)).then(snap => {
                 allShifts[sup] = snap.exists() ? (snap.data().dates || {}) : {};
-            }).catch(() => { allShifts[sup] = {}; }),
+            }).catch(() => { allShifts[sup] = {}; })
+        );
+        const oncallPromises = ONCALL_SUPERVISORS.map(sup =>
             getDoc(doc(db, 'supervisor_oncall', `sup_oncall_${sup}_${monthStr}`)).then(snap => {
                 allOncall[sup] = snap.exists() ? (snap.data().dates || {}) : {};
             }).catch(() => { allOncall[sup] = {}; })
-        ]);
+        );
+        const promises = [...shiftPromises, ...oncallPromises];
 
         await Promise.all(promises);
 
@@ -1330,7 +1338,7 @@
 
         const totals = new Array(lastDay).fill(0);
 
-        SUPERVISORS.forEach(sup => {
+        ONCALL_SUPERVISORS.forEach(sup => {
             html += `<tr><td class="supervisor-name">${sup}</td>`;
             for (let d = 1; d <= lastDay; d++) {
                 const dateStr = `${monthStr}-${String(d).padStart(2,'0')}`;
